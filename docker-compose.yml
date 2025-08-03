@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-job-tracker
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-your_secure_password_here}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-America/Los_Angeles}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your_encryption_key_here_change_this}
+      - N8N_USER_MANAGEMENT_DISABLED=false
+      - N8N_LOG_LEVEL=${N8N_LOG_LEVEL:-info}
+      # API Keys for n8n to use
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_SHEETS_PRIVATE_KEY=${GOOGLE_SHEETS_PRIVATE_KEY}
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
+      - DAILY_EMAIL_TO=${DAILY_EMAIL_TO}
+      - AIRTABLE_URL_1=${AIRTABLE_URL_1}
+      - AIRTABLE_URL_2=${AIRTABLE_URL_2}
+      - PREFERRED_LOCATIONS=${PREFERRED_LOCATIONS}
+      - PREFERRED_ROLES=${PREFERRED_ROLES}
+      - PREFERRED_SKILLS=${PREFERRED_SKILLS}
+      - DAILY_EXECUTION_HOUR=${DAILY_EXECUTION_HOUR}
+    volumes:
+      - ~/n8n-data:/home/node/.n8n
+      - ./workflow.json:/home/node/.n8n/workflow.json:ro
+      - ./resume.pdf:/home/node/.n8n/resume.pdf:ro
+      - ./credentials:/home/node/.n8n/credentials:ro
+    networks:
+      - n8n-network
+
+networks:
+  n8n-network:
+    driver: bridge
