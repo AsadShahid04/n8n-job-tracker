@@ -1,401 +1,139 @@
-# n8n Internship Job Tracker
+# N8N Job Tracker
 
-An automated job tracking system built with n8n that fetches internship opportunities from multiple sources, filters them based on your preferences, scores them using AI, and sends daily email digests.
+This project contains an N8N workflow that automatically scrapes LinkedIn job postings, analyzes them against a resume using AI, and saves matching jobs to Google Sheets.
 
-## 🚀 Quick Start
+## Setup Instructions
 
-### 1. Local Setup with Docker Compose
+### 1. Prerequisites
 
-```bash
-# Clone or navigate to this directory
-cd n8n-job-tracker
+- N8N instance running
+- OpenAI API key
+- Google Service Account credentials
+- Google Sheets document
 
-# Create the data directory
-mkdir -p ~/n8n-data
+### 2. Credentials Setup
 
-# Replace resume.pdf with your actual resume
-cp /path/to/your/resume.pdf ./resume.pdf
+#### OpenAI Credentials
 
-# Start n8n
-docker-compose up -d
+1. Go to your N8N credentials section
+2. Create a new OpenAI credential
+3. Add your OpenAI API key
+4. Note the credential ID for use in the template
 
-# Check logs
-docker logs -f n8n-job-tracker
-```
+#### Google Service Account
 
-### 2. Access n8n
+1. Create a Google Service Account in Google Cloud Console
+2. Download the JSON key file
+3. In N8N, create a new Google API credential
+4. Upload the service account JSON file
+5. Note the credential ID for use in the template
 
-- **URL**: http://localhost:5678
-- **Username**: admin
-- **Password**: your_secure_password_here (change this in docker-compose.yml)
+### 3. Google Sheets Setup
 
-## 📋 Prerequisites
+1. Create a new Google Sheets document
+2. Share it with your service account email (with edit permissions)
+3. Note the document ID from the URL (the long string between /d/ and /edit)
 
-### Required Files
+### 4. Workflow Setup
 
-- `resume.pdf` - Your resume for AI matching
-- API credentials for:
-  - OpenAI API
-  - Google Sheets API
-  - Gmail API
+#### Using the Template
 
-### Environment Setup
+1. Copy `workflows/linkedin-job.template.json` to `workflows/linkedin-job.json`
+2. Replace the following placeholders in the copied file:
 
-1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-2. **Google Sheets**: Create a Google Sheet and share it with your service account
-3. **Gmail**: Enable Gmail API and create OAuth2 credentials
+**OpenAI Node:**
 
-## 🔧 Configuration
+- `YOUR_OPENAI_CREDENTIAL_ID` → Your actual OpenAI credential ID
 
-### 1. Update Docker Compose Environment Variables
+**Google Sheets Node:**
 
-Edit `docker-compose.yml` and change:
+- `YOUR_GOOGLE_API_CREDENTIAL_ID` → Your actual Google API credential ID
+- `YOUR_GOOGLE_SHEETS_DOCUMENT_ID` → Your Google Sheets document ID
+- `YOUR_GOOGLE_SHEETS_URL` → Your Google Sheets URL
 
-```yaml
-- N8N_BASIC_AUTH_PASSWORD=your_secure_password_here
-- N8N_ENCRYPTION_KEY=your_encryption_key_here_change_this
-```
+**Wait Node:**
 
-### 2. Set Up API Credentials in n8n
+- `YOUR_WEBHOOK_ID` → The webhook ID generated when you set up the workflow
 
-1. Access n8n at http://localhost:5678
-2. Go to **Settings** → **Credentials**
-3. Add the following credentials:
+**Resume Node:**
 
-#### OpenAI API
+- `YOUR_RESUME_TEXT_HERE` → Your actual resume text
 
-- **Name**: OpenAI API
-- **API Key**: Your OpenAI API key
+**Meta Section:**
 
-#### Google Sheets
+- `YOUR_INSTANCE_ID` → Your N8N instance ID
 
-- **Name**: Google Sheets
-- **Service Account Email**: Your service account email
-- **Private Key**: Your service account private key
+### 5. Customization
 
-#### Gmail
+#### LinkedIn Job Search URL
 
-- **Name**: Gmail
-- **Client ID**: Your Gmail OAuth2 client ID
-- **Client Secret**: Your Gmail OAuth2 client secret
+Modify the URL in the "Scrape Last 24 hours Job" node to match your job search criteria:
 
-### 3. Import Workflow
+- Change keywords (e.g., "software engineer intern")
+- Modify location (geoId parameter)
+- Adjust experience level (f_E parameter)
 
-1. In n8n, go to **Workflows**
-2. Click **Import from file**
-3. Select the `workflow.json` file from this directory
-4. Update the following in the workflow:
-   - Google Sheet ID in the "Save to Google Sheets" node
-   - Your email address in the "Send Daily Email" node
+#### Job Match Score Threshold
 
-## 🔄 Workflow Configuration
+In the "Score Filter" node, you can adjust the minimum job match score (currently set to 50).
 
-### Data Sources
+#### Schedule
 
-The workflow fetches jobs from:
+The workflow runs on a schedule. You can modify the schedule in the "Schedule Trigger" node.
 
-- **SimplifyJobs**: GitHub repo with Summer 2024 internships
-- **SpeedyApply**: SWE job listings
-- **Airtable 1**: Public job board (CSV export)
-- **Airtable 2**: Public job board (CSV export)
+## Workflow Overview
 
-### Airtable CSV Export Method
+1. **Schedule Trigger**: Starts the workflow on a schedule
+2. **Resume**: Sets your resume text for AI analysis
+3. **Scrape Last 24 hours Job**: Fetches LinkedIn job listings
+4. **Extract Job Links**: Parses job URLs from the search results
+5. **Loop Over Items**: Processes each job individually
+6. **Wait**: Adds delay between requests to avoid rate limiting
+7. **Scrape Each Job**: Fetches individual job details
+8. **Parse**: Extracts job title, company, location, and description
+9. **OpenAI**: Analyzes job match using AI
+10. **Edit Fields**: Formats the AI response
+11. **Score Filter**: Filters jobs by match score
+12. **Save to Google Sheets**: Saves matching jobs to spreadsheet
 
-The workflow uses Airtable's built-in CSV export feature by appending `&exportFormat=csv` to the public view URLs. This is much more reliable than HTML scraping and provides clean, structured data.
+## Security Notes
 
-**How it works:**
-
-1. HTTP requests fetch CSV data from public Airtable views
-2. Code nodes parse the CSV and extract job information
-3. Column mapping is done automatically based on header names
-4. Data is cleaned and standardized before filtering
-
-### Filtering Criteria
-
-- **Locations**: Bay Area, Dallas, Austin, NYC, NJ, California, Texas, New York
-- **Roles**: SWE, AI/ML, Data Science, Full-stack, Intern, Internship
-- **Skills**: Python, C++, JavaScript, Kubernetes, Docker, AI, ML, Machine Learning
-
-### AI Scoring
-
-- Uses OpenAI to analyze job descriptions against your resume
-- Provides match score (1-10)
-- Generates technical skills summary
-
-## 📅 Scheduling
-
-### Daily Automation
-
-The workflow is configured to run daily at 9:00 AM. To modify:
-
-1. Edit the "Daily Trigger" node in n8n
-2. Change the cron expression to your preferred time
-3. Example: `0 9 * * *` = 9:00 AM daily
-
-### Manual Testing
-
-1. In n8n, click the "Daily Trigger" node
-2. Click "Execute Node" to test the workflow
-3. Check the execution logs for any errors
-
-## 🧪 Testing the Airtable Integration
-
-### Quick Test Scripts
-
-We've included test scripts to help you verify the Airtable integration:
-
-#### 1. Bash Test Script
-
-```bash
-# Test if URLs are accessible and return CSV data
-./test-airtable-urls.sh
-```
-
-#### 2. Python Test Script
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Test CSV parsing logic
-./test-csv-parsing.py
-```
-
-### Manual Testing
-
-You can also test the Airtable CSV export URLs directly in your browser:
-
-1. **Airtable 1**:
-
-   ```
-   https://airtable.com/app17F0kkWQZhC6HB/shrOTtndhc6HSgnYb/tblp8wxvfYam5sD04?viewControls=on&exportFormat=csv
-   ```
-
-2. **Airtable 2**:
-   ```
-   https://airtable.com/appjSXAWiVF4d1HoZ/shrf04yGbrK3IebAl/tbl7UBhvwqng6GRGZ?viewControls=on&exportFormat=csv
-   ```
-
-### Debug CSV Parsing
-
-If the CSV parsing isn't working correctly:
-
-1. **Check the CSV structure**: Visit the URLs above to see the actual column headers
-2. **Update column mapping**: Modify the parsing code in the "Parse Airtable" nodes
-3. **Test individual nodes**: Execute the "Fetch Airtable Jobs" nodes separately to see the raw CSV data
-
-### Common CSV Issues
-
-- **Column names**: The parser looks for headers containing 'title', 'company', 'location', etc.
-- **Quoted fields**: The parser handles CSV with commas in quoted fields
-- **Empty rows**: Empty rows are automatically skipped
-- **Encoding**: Ensure the CSV is UTF-8 encoded
-
-## 🖥️ 24/7 Local Operation
-
-### Keep Mac Awake
-
-```bash
-# Option 1: Using pmset (Terminal)
-sudo pmset -c sleep 0
-sudo pmset -c disablesleep 1
-
-# Option 2: Using Amphetamine app
-# Download from Mac App Store and set to "Indefinitely"
-
-# Option 3: Using caffeinate
-caffeinate -i
-```
-
-### Monitor Container
-
-```bash
-# Check if n8n is running
-docker ps
-
-# View logs
-docker logs -f n8n-job-tracker
-
-# Restart if needed
-docker-compose restart
-
-# Stop the service
-docker-compose down
-```
-
-## 🚀 Production Deployment
-
-### 1. Build Custom Docker Image
-
-Create a `Dockerfile`:
-
-```dockerfile
-FROM n8nio/n8n:latest
-
-# Copy workflow and resume
-COPY workflow.json /home/node/.n8n/
-COPY resume.pdf /home/node/.n8n/
-
-# Set environment variables
-ENV N8N_BASIC_AUTH_ACTIVE=true
-ENV N8N_BASIC_AUTH_USER=admin
-ENV N8N_BASIC_AUTH_PASSWORD=your_production_password
-ENV N8N_ENCRYPTION_KEY=your_production_encryption_key
-```
-
-### 2. Deploy to VPS (Hostinger)
-
-```bash
-# Build the image
-docker build -t n8n-job-tracker .
-
-# Run on VPS
-docker run -d \
-  --name n8n-job-tracker \
-  --restart always \
-  -p 5678:5678 \
-  -v n8n-data:/home/node/.n8n \
-  n8n-job-tracker
-```
-
-### 3. VPS Setup Commands
-
-```bash
-# Install Docker on VPS
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Create data volume
-docker volume create n8n-data
-
-# Upload your files to VPS
-scp docker-compose.yml user@your-vps:/home/user/
-scp workflow.json user@your-vps:/home/user/
-scp resume.pdf user@your-vps:/home/user/
-
-# On VPS, start the service
-cd /home/user
-docker-compose up -d
-```
-
-## 📊 Expected Output
-
-### Google Sheet Columns
-
-- Job Title
-- Company
-- Location
-- Application Link
-- Match Score (1-10)
-- Skills Summary
-- Source (Airtable 1, Airtable 2, SimplifyJobs, SpeedyApply)
-- Date Added
-
-### Daily Email Format
-
-```
-Subject: Daily Internship Matches - [Date]
-
-Found X new job matches today:
-
-[Job Title] at [Company]
-Location: [Location]
-Match Score: 8/10
-Skills Match: Strong Python, ML experience
-Source: Airtable 1
-Apply Here: [Link]
-
-Best regards,
-Your Job Tracker
-```
-
-## 🔍 Troubleshooting
+- The original workflow file (`workflows/linkedin-job.json`) is excluded from git via .gitignore
+- Only the template file (`workflows/linkedin-job.template.json`) is committed to the repository
+- All sensitive data (credentials, personal info) is masked in the template
+- Always use the template and replace placeholders with your actual values
+
+## Troubleshooting
 
 ### Common Issues
 
-1. **Container won't start**
+1. **Google Sheets Permission Denied**
 
-   ```bash
-   docker logs n8n-job-tracker
-   # Check for port conflicts or permission issues
-   ```
+   - Ensure the service account email has edit access to the Google Sheets document
+   - Check that the document ID is correct
 
-2. **Workflow not executing**
+2. **OpenAI API Errors**
 
-   - Check if workflow is activated in n8n
-   - Verify cron trigger settings
-   - Check execution logs in n8n UI
+   - Verify your OpenAI API key is valid and has sufficient credits
+   - Check the credential ID in the workflow
 
-3. **API errors**
+3. **LinkedIn Rate Limiting**
 
-   - Verify credentials are correctly set in n8n
-   - Check API quotas and limits
-   - Test individual nodes manually
+   - The workflow includes a 10-second wait between requests
+   - You may need to increase this if you encounter rate limiting
 
-4. **Email not sending**
+4. **Job Parsing Errors**
+   - LinkedIn's HTML structure may change over time
+   - Update the CSS selectors in the "Parse" node if needed
 
-   - Verify Gmail OAuth2 setup
-   - Check email address in workflow
-   - Test Gmail node manually
+## File Structure
 
-5. **Airtable CSV parsing issues**
-   - Check if the Airtable URLs are accessible
-   - Verify the CSV structure matches expected format
-   - Test the CSV export URLs in browser
-   - Check the parsing code in the Code nodes
-
-### Airtable-Specific Issues
-
-1. **CSV not downloading**
-
-   - Ensure the Airtable view is public
-   - Check if the URL is correct
-   - Try accessing the URL directly in browser
-
-2. **Wrong column mapping**
-
-   - Check the actual CSV headers
-   - Update the column indices in the parsing code
-   - Test with a sample row
-
-3. **Empty data**
-   - Verify the Airtable has data
-   - Check if the view filters are too restrictive
-   - Test the export URL manually
-
-### Logs and Monitoring
-
-```bash
-# View n8n logs
-docker logs -f n8n-job-tracker
-
-# Check container status
-docker ps
-
-# View resource usage
-docker stats n8n-job-tracker
 ```
-
-## 🔐 Security Notes
-
-- Change default passwords in production
-- Use strong encryption keys
-- Keep API keys secure
-- Consider using secrets management for production
-- Enable HTTPS for production deployments
-
-## 📈 Next Steps
-
-1. **Enhance AI Scoring**: Add more sophisticated matching algorithms
-2. **Add More Sources**: Integrate LinkedIn, Indeed, or other job boards
-3. **Advanced Filtering**: Add more granular location and role filters
-4. **Analytics**: Add job application tracking and success metrics
-5. **Mobile App**: Create a mobile interface for job tracking
-
-## 🤝 Contributing
-
-This is a personal project, but feel free to fork and adapt for your own use case!
-
----
-
-**Happy Job Hunting! 🎯**
+n8n-job-tracker/
+├── workflows/
+│   ├── linkedin-job.json          # Original workflow (gitignored)
+│   └── linkedin-job.template.json # Template file (committed)
+├── credentials/                   # N8N credentials (gitignored)
+├── .gitignore                    # Git ignore rules
+└── README.md                     # This file
+```
