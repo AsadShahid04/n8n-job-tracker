@@ -38,7 +38,7 @@ This project contains an N8N workflow that automatically scrapes LinkedIn job po
 
 #### Using the Template
 
-1. Copy `workflows/linkedin-job.template.json` to `workflows/linkedin-job.json`
+1. Copy `linkedin-job.template.json` to `workflows/linkedin-job.json`
 2. Replace the following placeholders in the copied file:
 
 **OpenAI Node:**
@@ -130,9 +130,9 @@ The workflow runs on a schedule. You can modify the schedule in the "Schedule Tr
 
 ```
 n8n-job-tracker/
+├── linkedin-job.template.json    # Template file (committed)
 ├── workflows/
-│   ├── linkedin-job.json          # Original workflow (gitignored)
-│   └── linkedin-job.template.json # Template file (committed)
+│   └── linkedin-job.json         # Original workflow (gitignored)
 ├── credentials/                   # N8N credentials (gitignored)
 ├── .gitignore                    # Git ignore rules
 └── README.md                     # This file
